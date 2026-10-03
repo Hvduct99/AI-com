@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="Ngũ Hành Chiến — game đối kháng 3D Kim Mộc Thủy Hỏa Thổ, chơi 2 người hoặc đấu máy ngay trên trình duyệt." />
+  <meta name="theme-color" content="#0a0a15" />
+  <title>Ngũ Hành Chiến - 3D Fighter</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☯️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <!-- Màn chọn nhân vật -->
+    <div id="select-screen" class="screen">
+      <h1>NGŨ HÀNH CHIẾN</h1>
+      <p class="subtitle">Kim khắc Mộc • Mộc khắc Thổ • Thổ khắc Thủy • Thủy khắc Hỏa • Hỏa khắc Kim</p>
+
+      <div class="mode-row">
+        <button type="button" class="pill" data-mode="pvp">👥 2 Người</button>
+        <button type="button" class="pill" data-mode="cpu">🤖 Đấu Máy</button>
+      </div>
+      <div class="mode-row" id="level-row">
+        <button type="button" class="pill small" data-level="easy">Dễ</button>
+        <button type="button" class="pill small" data-level="normal">Thường</button>
+        <button type="button" class="pill small" data-level="hard">Khó</button>
+      </div>
+
+      <div class="select-grid">
+        <div class="player-column">
+          <h2>Player 1 <span class="hint" id="p1-hint"></span></h2>
+          <div class="char-list" data-player="1"></div>
+          <div class="picked" id="picked-1">Chưa chọn</div>
+        </div>
+        <div class="player-column">
+          <h2 id="p2-title">Player 2</h2>
+          <div class="char-list" data-player="2"></div>
+          <div class="picked" id="picked-2">Chưa chọn</div>
+        </div>
+      </div>
+
+      <button id="start-btn" type="button" disabled>ĐANG TẢI...</button>
+      <p class="footnote">Esc: tạm dừng • Chiêu cuối (R / P) cần đầy thanh nộ • Đứng sát biên đỏ sẽ mất máu</p>
+    </div>
+
+    <!-- Màn hình game -->
+    <div id="game-screen" class="screen hidden">
+      <canvas id="game-canvas"></canvas>
+
+      <div class="hud-top">
+        <div class="player-hud left" id="p1-hud">
+          <div class="name" id="p1-name">Player 1</div>
+          <div class="bar hp"><div class="lag" id="p1-hp-lag"></div><div class="fill" id="p1-hp"></div></div>
+          <div class="bar energy"><div class="fill" id="p1-energy"></div></div>
+        </div>
+        <div class="center-info">
+          <div class="timer" id="timer">99</div>
+          <div class="top-buttons">
+            <button type="button" class="icon-btn" id="pause-btn" title="Tạm dừng (Esc)">⏸</button>
+            <button type="button" class="icon-btn" id="mute-btn" title="Bật/tắt âm thanh">🔊</button>
+          </div>
+        </div>
+        <div class="player-hud right" id="p2-hud">
+          <div class="name" id="p2-name">Player 2</div>
+          <div class="bar hp"><div class="lag" id="p2-hp-lag"></div><div class="fill" id="p2-hp"></div></div>
+          <div class="bar energy"><div class="fill" id="p2-energy"></div></div>
+        </div>
+      </div>
+
+      <div id="center-text" class="hidden"></div>
+
+      <div class="hud-bottom">
+        <div class="skill-bar left" id="p1-skills"></div>
+        <div class="skill-bar right" id="p2-skills"></div>
+      </div>
+
+      <!-- Nút cảm ứng (điện thoại, chế độ đấu máy) -->
+      <div id="touch-controls" class="hidden">
+        <div class="touch-move">
+          <button type="button" data-code="KeyA">◀</button>
+          <button type="button" data-code="KeyD">▶</button>
+        </div>
+        <div class="touch-skills">
+          <button type="button" data-code="KeyQ" data-idx="0">1</button>
+          <button type="button" data-code="KeyW" data-idx="1">2</button>
+          <button type="button" data-code="KeyE" data-idx="2">3</button>
+          <button type="button" data-code="KeyR" data-idx="3">★</button>
+        </div>
+      </div>
+
+      <div id="pause-overlay" class="overlay hidden">
+        <h1>TẠM DỪNG</h1>
+        <div class="overlay-buttons">
+          <button type="button" class="btn primary" id="resume-btn">TIẾP TỤC</button>
+          <button type="button" class="btn" id="pause-restart-btn">ĐÁNH LẠI</button>
+          <button type="button" class="btn" id="pause-menu-btn">CHỌN TƯỚNG</button>
+        </div>
+      </div>
+
+      <div id="end-overlay" class="overlay hidden">
+        <h1 id="winner-text"></h1>
+        <p id="winner-sub"></p>
+        <div class="overlay-buttons">
+          <button type="button" class="btn primary" id="restart-btn">CHƠI LẠI</button>
+          <button type="button" class="btn" id="menu-btn">CHỌN TƯỚNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
