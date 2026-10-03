@@ -84,7 +84,7 @@ export class CharacterSelect {
         card.innerHTML = `
           <div class="icon">${c.icon}</div>
           <div class="name">${c.name}</div>
-          <div class="meta">HP ${c.maxHp}</div>
+          <div class="meta"><span class="style-tag ${c.style}">${c.style === 'melee' ? 'Cận chiến' : 'Tầm xa'}</span> HP ${c.maxHp}</div>
           <div class="meta">${counterHint(c.element)}</div>
         `;
         card.title = `${c.title}\n${c.desc}\nSkill: ${c.skills.map((s) => s.name).join(' / ')}`;
@@ -108,10 +108,10 @@ export class CharacterSelect {
     this.levelRow.classList.toggle('hidden', !cpu);
     this.p2Title.innerHTML = cpu
       ? 'Máy <span class="hint">(bỏ trống = ngẫu nhiên)</span>'
-      : 'Player 2 <span class="hint">(← → đi • ↓ đỡ • H J K chiêu • L tuyệt chiêu)</span>';
+      : 'Player 2 <span class="hint">(← → đi • ↑ nhảy • ↓ đỡ • H J K chiêu • L tuyệt chiêu)</span>';
     this.p1Hint.textContent = cpu
-      ? '(A D / ← → đi • S / ↓ đỡ • Q W E / H J K chiêu • R / L tuyệt chiêu)'
-      : '(A D đi • S đỡ • Q W E chiêu • R tuyệt chiêu)';
+      ? '(A D / ← → đi • X / ↑ nhảy • S / ↓ đỡ • Q W E / H J K chiêu • R / L tuyệt chiêu)'
+      : '(A D đi • X nhảy • S đỡ • Q W E chiêu • R tuyệt chiêu)';
 
     for (const player of [1, 2]) {
       this.lists[player].querySelectorAll('.char-card').forEach((el) => {

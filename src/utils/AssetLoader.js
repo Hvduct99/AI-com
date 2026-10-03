@@ -56,6 +56,14 @@ function loadHero(model) {
       const h = box.isEmpty() ? 0 : box.max.y - box.min.y;
       const scale = Number.isFinite(h) && h > 1e-4 ? FIGHTER_HEIGHT / h : 1;
       for (const clip of gltf.animations) clip.name = clip.name.split('|').pop();
+      // Clip lộn nhào khi nhảy: lấy từ Roll, bỏ dịch chuyển gốc để lộn tại chỗ
+      const roll = gltf.animations.find((c) => c.name === 'Roll');
+      if (roll) {
+        const flip = roll.clone();
+        flip.name = 'JumpFlip';
+        flip.tracks = flip.tracks.filter((t) => !/^(Root|Body|Hips|CharacterArmature)\.position$/.test(t.name));
+        gltf.animations.push(flip);
+      }
       resolve({ scene, clips: gltf.animations, scale });
     }, undefined, (err) => {
       console.warn('[assets] Không tải được model', model, err);
@@ -244,6 +252,76 @@ const WEAPONS = {
     g.add(blade, tip, guard, grip, tassel(0.2));
     return g;
   },
+  // Lữ Bố — Phương Thiên Họa Kích (mũi thương + 2 lưỡi trăng khuyết)
+  halberd() {
+    const g = new THREE.Group();
+    g.add(shaftAlongX(3.0, 0.042, M.wood(0x6a1010), 0.9));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.55, 4), M.steel());
+    tip.rotation.z = Math.PI / 2; tip.position.x = -2.38;
+    const s = new THREE.Shape();
+    s.moveTo(0, 0);
+    s.quadraticCurveTo(-0.05, 0.32, -0.32, 0.42);
+    s.quadraticCurveTo(-0.16, 0.2, -0.3, 0.02);
+    s.lineTo(0, 0);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: 0.025, bevelEnabled: false });
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e8f0, metalness: 0.85, roughness: 0.25, side: THREE.DoubleSide });
+    const up = new THREE.Mesh(geo, mat);
+    up.position.set(-1.92, 0.04, -0.012);
+    const down = new THREE.Mesh(geo, mat);
+    down.position.set(-1.92, -0.04, 0.012);
+    down.rotation.x = Math.PI;
+    g.add(tip, up, down, tassel(-1.82, 0xd42020));
+    return g;
+  },
+  // Mã Siêu — thương kỵ binh dài, tua đỏ
+  lance() {
+    const g = new THREE.Group();
+    g.add(shaftAlongX(3.3, 0.04, M.wood(0xf0f0f0), 0.95));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.7, 6), M.steel());
+    tip.rotation.z = Math.PI / 2; tip.position.x = -2.68;
+    const guard = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), M.gold());
+    guard.position.x = -2.33;
+    g.add(tip, guard, tassel(-2.25), tassel(-2.18, 0xffffff));
+    return g;
+  },
+  // Hứa Chử — đại đao bản rộng
+  dao() {
+    const g = new THREE.Group();
+    g.add(shaftAlongX(0.9, 0.045, M.wood(0x2a1a10), 0.45));
+    const s = new THREE.Shape();
+    s.moveTo(0, -0.06);
+    s.lineTo(-1.1, -0.1);
+    s.quadraticCurveTo(-1.45, -0.05, -1.5, 0.28);
+    s.quadraticCurveTo(-1.0, 0.24, 0, 0.12);
+    const blade = new THREE.Mesh(
+      new THREE.ExtrudeGeometry(s, { depth: 0.03, bevelEnabled: false }),
+      new THREE.MeshStandardMaterial({ color: 0xd8dde4, metalness: 0.85, roughness: 0.3, side: THREE.DoubleSide })
+    );
+    blade.position.set(-0.05, 0, -0.015);
+    const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 10), M.gold());
+    guard.rotation.z = Math.PI / 2; guard.position.x = -0.02;
+    g.add(blade, guard, tassel(0.4, 0x1e8a3a));
+    return g;
+  },
+  // Điển Vi — đại phủ (rìu chiến)
+  axes() {
+    const g = new THREE.Group();
+    g.add(shaftAlongX(1.3, 0.04, M.wood(0x3a2410), 0.45));
+    const s = new THREE.Shape();
+    s.moveTo(0, 0.08);
+    s.quadraticCurveTo(0.12, 0.45, 0.32, 0.58);
+    s.quadraticCurveTo(0, 0.62, -0.32, 0.58);
+    s.quadraticCurveTo(-0.12, 0.45, 0, 0.08);
+    const blade = new THREE.Mesh(
+      new THREE.ExtrudeGeometry(s, { depth: 0.05, bevelEnabled: false }),
+      new THREE.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide })
+    );
+    blade.position.set(-0.75, 0, -0.025);
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.25, 6), M.steel());
+    spike.rotation.z = Math.PI / 2; spike.position.x = -0.95;
+    g.add(blade, spike);
+    return g;
+  },
   // Trương Phi — Trượng Bát Xà Mâu (mũi lượn hình rắn)
   serpent() {
     const g = new THREE.Group();
@@ -321,6 +399,7 @@ function addFootDisc(g, color) {
   discRing.rotation.x = -Math.PI / 2;
   discRing.position.y = 0.03;
   g.add(discRing);
+  g.userData.discs = [disc, discRing]; // Character giữ đĩa bám đất khi nhảy
 }
 
 function buildHeroFighter(def, src) {
@@ -655,8 +734,46 @@ function projTho(skill) {
   return g;
 }
 
+// Cận chiến — nhát chém vòng cung (quét từ trên xuống), màu theo hệ
+const SLASH_COLORS = {
+  kim: [0xf4f8ff, 0xbfd8ff], moc: [0xe9ffe0, 0x4dff70], thuy: [0xe8f8ff, 0x4fb8ff],
+  hoa: [0xfff1c0, 0xff6a1a], tho: [0xfff0d0, 0xe0a040],
+};
+function projSlash(skill) {
+  const s = skill.size, ult = skill.isUltimate;
+  const [cCore, cGlow] = SLASH_COLORS[skill.element] ?? SLASH_COLORS.kim;
+  const P = cached(`slash${skill.element}${skill.index}`, () => ({
+    outer: new THREE.RingGeometry(0.62, 1, 40, 1, -1.05, 2.1),
+    inner: new THREE.RingGeometry(0.86, 0.97, 40, 1, -0.95, 1.9),
+    glowMat: additive(cGlow, 0.85),
+    coreMat: new THREE.MeshBasicMaterial({ color: cCore, side: THREE.DoubleSide }),
+  }));
+  const g = new THREE.Group();
+  const sweep = new THREE.Group();
+  const R = s * 2.6;
+  const a = new THREE.Mesh(P.outer, P.glowMat);
+  const b = new THREE.Mesh(P.inner, P.coreMat);
+  a.scale.setScalar(R); b.scale.setScalar(R);
+  sweep.add(a, b);
+  if (ult) {
+    const c = new THREE.Mesh(P.outer, P.glowMat);
+    c.scale.setScalar(R * 0.75);
+    c.rotation.z = Math.PI; // nhát chém ngược chiều tạo hình chữ X
+    c.position.x = R * 0.25;
+    sweep.add(c);
+  }
+  sweep.position.x = -R * 0.55;
+  g.add(sweep, projSprite(cGlow, s * 4, 0.7));
+  g.userData.animate = (dt, t) => {
+    sweep.rotation.z = 0.7 - Math.min(1, t * 6) * 1.4;
+    sweep.scale.setScalar(0.85 + Math.min(1, t * 8) * 0.25);
+  };
+  return g;
+}
+
 const PROJ_BUILDERS = { kim: projKim, moc: projMoc, thuy: projThuy, hoa: projHoa, tho: projTho };
 function buildProjectileMesh(skill) {
+  if (skill.melee) return projSlash(skill);
   return (PROJ_BUILDERS[skill.element] ?? projThuy)(skill);
 }
 

@@ -4,7 +4,7 @@
 // Chỉ ghi DOM khi giá trị đổi (tránh layout thrash mỗi frame).
 // ============================================================
 
-import { BLOCK } from '../config/characters.js';
+import { BLOCK, ENERGY } from '../config/characters.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -105,7 +105,7 @@ export class HUD {
     const en = Math.floor(f.energy);
     this._set(`en${player}`, en, (v) => {
       this.el.en[player].style.width = `${v}%`;
-      this.el.en[player].classList.toggle('full', v >= 100);
+      this.el.en[player].classList.toggle('full', v >= ENERGY.ultCost);
     });
     const bs = this.blockSlots[player];
     if (bs) {
@@ -117,12 +117,13 @@ export class HUD {
       if (on !== bs.on) { bs.on = on; bs.root.classList.toggle('active', on); }
       if (player === 1) this._touch('b', cd, ready, on);
     }
+    if (player === 1) this._touch('j', 0, f.canJump());
     f.def.skills.forEach((sk, i) => {
       const slot = this.slots[player][i];
       if (!slot) return;
       const cd = sk.cooldown > 0 ? Math.ceil((f.cooldowns[i] / sk.cooldown) * 50) * 2 : 0;
       if (cd !== slot.cd) { slot.cd = cd; slot.mask.style.height = `${cd}%`; }
-      const locked = sk.isUltimate && f.energy < 100;
+      const locked = sk.isUltimate && f.energy < ENERGY.ultCost;
       const ready = !locked && f.cooldowns[i] <= 0;
       if (ready !== slot.ready) { slot.ready = ready; slot.root.classList.toggle('locked', !ready); }
       if (sk.isUltimate && ready !== slot.charged) {

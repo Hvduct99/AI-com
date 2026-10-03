@@ -192,6 +192,18 @@ button { font-family: inherit; color: inherit; }
 .bar.hp .fill { background: linear-gradient(90deg, #ff3838, #ff6b6b); }
 .player-hud.right .bar.hp .fill { background: linear-gradient(90deg, #ff6b6b, #ff3838); }
 .bar.energy { height: 8px; }
+/* Mốc 50%: đủ nộ dùng tuyệt chiêu */
+.bar.energy::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  background: rgba(255,215,0,0.9);
+  z-index: 2;
+}
+.style-tag { display: inline-block; padding: 0 4px; border-radius: 4px; font-weight: 700; font-size: 9px; }
+.style-tag.melee { background: #b71c1c; color: #fff; }
+.style-tag.ranged { background: #1565c0; color: #fff; }
 .bar.energy .fill { background: linear-gradient(90deg, #4facfe, #00f2fe); width: 0%; }
 .bar.energy .fill.full { background: linear-gradient(90deg, #ffd700, #fff176); animation: glow 0.6s infinite alternate; }
 @keyframes glow { to { filter: brightness(1.5); } }

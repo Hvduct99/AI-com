@@ -1,21 +1,29 @@
 # NGŨ HÀNH CHIẾN — Game đối kháng 3D Tam Quốc (Three.js + Vite)
 
-5 tướng Tam Quốc, mỗi người một hệ ngũ hành, đánh nhau trên lôi đài trước cổng tam quan.
+10 tướng Tam Quốc (6 tầm xa, 4 cận chiến), mỗi người một hệ ngũ hành, đánh nhau trên lôi đài trước cổng tam quan.
 
-| Tướng | Hệ | Vũ khí | Tuyệt chiêu |
-|---|---|---|---|
-| Triệu Vân | Kim | Long Đảm Ngân Thương | Long Đảm Phá Trận |
-| Quan Vũ | Mộc | Thanh Long Yển Nguyệt Đao | Thanh Long Yển Nguyệt |
-| Gia Cát Lượng | Thủy | Quạt lông vũ | Thủy Long Ngâm |
-| Chu Du | Hỏa | Trường kiếm | Xích Bích Hỏa Công |
-| Trương Phi | Thổ | Trượng Bát Xà Mâu | Đại Náo Trường Bản Kiều |
+| Tướng | Hệ | Kiểu | Vũ khí | Tuyệt chiêu |
+|---|---|---|---|---|
+| Triệu Vân | Kim | Tầm xa | Long Đảm Ngân Thương | Long Đảm Phá Trận |
+| Quan Vũ | Mộc | Tầm xa | Thanh Long Yển Nguyệt Đao | Thanh Long Yển Nguyệt |
+| Gia Cát Lượng | Thủy | Tầm xa | Quạt lông vũ | Thủy Long Ngâm |
+| Chu Du | Hỏa | Tầm xa | Trường kiếm | Xích Bích Hỏa Công |
+| Trương Phi | Thổ | Tầm xa | Trượng Bát Xà Mâu | Đại Náo Trường Bản Kiều |
+| Tôn Thượng Hương | Thủy | Tầm xa | Cung | Giang Đông Thần Tiễn |
+| Lữ Bố | Hỏa | Cận chiến | Phương Thiên Họa Kích | Thiên Hạ Vô Song |
+| Điển Vi | Thổ | Cận chiến | Đại phủ | Ác Lai Nộ |
+| Mã Siêu | Kim | Cận chiến | Thương kỵ binh | Thần Uy Thiên Tướng |
+| Hứa Chử | Mộc | Cận chiến | Đại đao | Hổ Vệ Thiên Quân |
+
+Tướng cận chiến: chém tầm ngắn (~2-4 đơn vị), sát thương cao, hồi chiêu nhanh; chiêu 3 và
+tuyệt chiêu lao tới. Nhát chém triệt tiêu được đạn thường của đối thủ.
 
 ## Điều khiển
 
-| | Di chuyển | Đỡ | Chiêu 1-3 | Tuyệt chiêu |
-|---|---|---|---|---|
-| Player 1 | `A` `D` | `S` | `Q` `W` `E` | `R` |
-| Player 2 | `←` `→` | `↓` | `H` `J` `K` | `L` |
+| | Di chuyển | Nhảy | Đỡ | Chiêu 1-3 | Tuyệt chiêu |
+|---|---|---|---|---|---|
+| Player 1 | `A` `D` | `X` | `S` | `Q` `W` `E` | `R` |
+| Player 2 | `←` `→` | `↑` | `↓` | `H` `J` `K` | `L` |
 
 - Đấu Máy: dùng được cả hai bộ phím. Điện thoại có nút cảm ứng.
 - `Esc`: tạm dừng. Nút 🔊: bật/tắt âm thanh.
@@ -26,7 +34,11 @@
 - **Đỡ**: tốn 12 năng lượng, hồi chiêu 0.45s (dùng liên tục được nếu đủ năng lượng).
   Đỡ trúng chỉ mất 20% sát thương (tuyệt chiêu: 45%). Giơ khiên sát lúc trúng (≤0.18s) =
   **ĐỠ HOÀN HẢO**: không mất máu, hoàn 10 năng lượng. Đang đỡ thì đi chậm.
-- Tuyệt chiêu cần đầy nộ, phá được đạn thường, xuyên qua người.
+- **Năng lượng (nộ)**: hồi 7/giây, đánh trúng hoặc bị trúng cũng được cộng thêm.
+- **Tuyệt chiêu** dùng được khi đạt **nửa thanh nộ** (50, có vạch vàng trên thanh), tốn 50;
+  phá được đạn thường, xuyên qua người.
+- **Nhảy**: né được đạn thường khi lên cao; nhảy qua đầu đối thủ được. Tuyệt chiêu to
+  và nhát chém cận chiến thì khó né. Bắn lúc đang nhảy thì đạn chúc dần xuống.
 - Đạn hai bên va nhau thì triệt tiêu. Đứng sát biên đỏ: mất máu + bị đẩy ra.
 - 99 giây, hết giờ bên còn nhiều % máu hơn thắng.
 
@@ -62,7 +74,8 @@ Xem chi tiết ở `DEPLOY_HOSTINGER.md`.
 
 - Thêm/sửa tướng: `CHARACTERS` trong `src/config/characters.js`
   (`model` = file trong `public/models/heroes/`, `weapon`, `tint`, `banner`)
-- Thông số Đỡ: `BLOCK` trong `src/config/characters.js`
+- Thông số Đỡ / Nhảy / Năng lượng / chỉ số tầm xa & cận chiến: `BLOCK`, `JUMP`, `ENERGY`,
+  `STYLE` trong `src/config/characters.js`
 - Cân bằng khắc chế: `src/config/elements.js`
 - Luật biên: hằng số trong `src/entities/Arena.js`
 

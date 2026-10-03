@@ -18,7 +18,7 @@
    public_html/
    ├── index.html      (~5.5 KB — KHÔNG phải bản 2.4 KB cũ)
    ├── assets/         (2 file .js + 1 file .css)
-   ├── models/heroes/  (5 file .glb)
+   ├── models/heroes/  (6 file .glb)
    └── textures/       (2 file .jpg)
    ```
 6. Mở tên miền → **Ctrl+F5**.

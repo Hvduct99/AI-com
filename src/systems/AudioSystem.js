@@ -107,6 +107,12 @@ export class AudioSystem {
     this._noise(0.2, 0.25, 'highpass', 4000, 2000);
   }
 
+  jump() {
+    if (!this._ok('jump', 0.1)) return;
+    this._tone('sine', 220, 520, 0.14, 0.12);
+    this._noise(0.1, 0.1, 'highpass', 1500, 3000);
+  }
+
   shieldUp() {
     if (!this._ok('shield', 0.08)) return;
     this._tone('sine', 300, 600, 0.12, 0.12);

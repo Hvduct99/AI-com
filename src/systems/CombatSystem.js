@@ -7,9 +7,11 @@
 // ============================================================
 import * as THREE from 'three';
 import { getElementMultiplier, ELEMENTS } from '../config/elements.js';
-import { BLOCK } from '../config/characters.js';
+import { BLOCK, ENERGY } from '../config/characters.js';
 
 const _up = new THREE.Vector3(0, 0.7, 0);
+const BODY_CENTER = 1.6; // tâm thân người tính từ chân
+const BODY_HALF = 1.3;   // nửa chiều cao vùng trúng đòn
 
 export class CombatSystem {
   constructor({ onHit } = {}) {
@@ -31,11 +33,12 @@ export class CombatSystem {
       }
     }
 
-    // 2. Đạn vs người (sàn đấu 2D: chỉ xét trục x)
+    // 2. Đạn vs người (sàn 2D: xét trục x + độ cao để nhảy né được)
     for (const p of projectiles) {
       if (!p.alive) continue;
       for (const f of fighters) {
         if (f === p.owner || !f.alive || p.hitTargets.has(f)) continue;
+        if (Math.abs(p.mesh.position.y - (f.pos.y + BODY_CENTER)) > p.radius + BODY_HALF) continue;
         // Khiên đứng trước người nên chạm sớm hơn thân một chút
         const reach = p.radius + 0.55 + (f.blocking ? 0.5 : 0);
         if (Math.abs(p.mesh.position.x - f.pos.x) < reach) {
@@ -96,7 +99,7 @@ export class CombatSystem {
     target.applyKnockback(p.dir, big ? 9 : 2.5 + p.skill.damage * 0.18);
     // Năng lượng: người đánh hồi, người bị đánh cũng hồi chút để lật kèo
     atk.healEnergy(p.skill.energyGain || 0);
-    target.healEnergy(6);
+    target.healEnergy(ENERGY.hitTaken);
 
     fx.impact(hitPos, atk.element, big);
     fx.hitText(hitPos, `-${dmg}`, counter ? '#ffd700' : '#ffffff', big || counter);

@@ -7,14 +7,14 @@ import * as THREE from 'three';
 import { Character } from './entities/Character.js';
 import { castSkill } from './entities/Skill.js';
 import { Arena, HALF_BOUND } from './entities/Arena.js';
-import { InputSystem, BLOCK_INDEX } from './systems/InputSystem.js';
+import { InputSystem, BLOCK_INDEX, JUMP_INDEX } from './systems/InputSystem.js';
 import { CombatSystem } from './systems/CombatSystem.js';
 import { EffectSystem } from './systems/EffectSystem.js';
 import { AIController } from './systems/AIController.js';
 import { HUD } from './ui/HUD.js';
 import { AssetBuilders, makeSkyTexture } from './utils/AssetLoader.js';
 import { ELEMENTS } from './config/elements.js';
-import { CHARACTERS } from './config/characters.js';
+import { CHARACTERS, ENERGY } from './config/characters.js';
 
 const ROUND_TIME = 99;
 const MIN_SEPARATION = 1.3;
@@ -217,6 +217,8 @@ export class Game {
   }
 
   _separate(f1, f2) {
+    // Đang nhảy cao hơn hẳn đối thủ thì được bay qua đầu
+    if (Math.abs(f1.pos.y - f2.pos.y) > 2.0) return;
     let d = f2.pos.x - f1.pos.x;
     if (Math.abs(d) >= MIN_SEPARATION) return;
     const s = d === 0 ? 1 : Math.sign(d);
@@ -234,6 +236,13 @@ export class Game {
   _castQueued(f1, f2) {
     for (const q of this.input.drainSkillQueue()) {
       const caster = q.player === 1 ? f1 : f2;
+      if (q.index === JUMP_INDEX) {
+        if (caster.jump()) {
+          this.audio?.jump();
+          this.fx.burst(caster.pos.clone().setY(0.15), 0xd8c8b0, 8, 2.5, 0.5);
+        }
+        continue;
+      }
       if (q.index === BLOCK_INDEX) {
         if (caster.block()) {
           this.audio?.shieldUp();
@@ -248,7 +257,7 @@ export class Game {
       if (!skill) continue;
       if (!caster.canCast(q.index)) {
         const k = q.player - 1;
-        if (skill.isUltimate && caster.alive && caster.energy < 100 && this.denyCd[k] <= 0) {
+        if (skill.isUltimate && caster.alive && caster.energy < ENERGY.ultCost && this.denyCd[k] <= 0) {
           this.denyCd[k] = 0.8;
           this.fx.hitText(caster.pos.clone().setY(3.2), 'CHƯA ĐỦ NỘ!', '#ffd700', false);
           this.audio?.denied();
@@ -340,8 +349,8 @@ export class Game {
       }
       f1.integrate(dt, this.input.moveAxis(1), HALF_BOUND);
       f2.integrate(dt, ax2, HALF_BOUND);
-      f1.healEnergy(4 * dt);
-      f2.healEnergy(4 * dt);
+      f1.healEnergy(ENERGY.regen * dt);
+      f2.healEnergy(ENERGY.regen * dt);
       this._separate(f1, f2);
 
       for (const f of this.fighters) {
@@ -358,6 +367,9 @@ export class Game {
       f2.integrate(dt, 0, HALF_BOUND);
       this._separate(f1, f2);
       this.input.drainSkillQueue();
+    }
+    for (const f of this.fighters) {
+      if (f.landed) this.fx.burst(f.pos.clone().setY(0.1), 0xd8c8b0, 10, 3, 0.4);
     }
     this.arena.update(dt);
 

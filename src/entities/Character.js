@@ -5,7 +5,7 @@
 // ============================================================
 import * as THREE from 'three';
 import { ELEMENTS } from '../config/elements.js';
-import { BLOCK } from '../config/characters.js';
+import { BLOCK, ENERGY, JUMP } from '../config/characters.js';
 import { AssetBuilders } from '../utils/AssetLoader.js';
 
 let UID = 0;
@@ -35,9 +35,10 @@ function wrapAngle(a) {
 const ANIM_ROLES = {
   idle: ['Idle_Attacking', 'Idle_Weapon', 'Attack_Idle', 'Attacking_Idle', 'Idle'],
   walk: ['Walk', 'Walking'],
-  light: ['Sword_AttackFast', 'Dagger_Attack', 'Attack', 'Staff_Attack', 'Spell1', 'Punch'],
-  heavy: ['Sword_Attack', 'Dagger_Attack2', 'Attack2', 'Spell2', 'Staff_Attack', 'Punch'],
-  ult: ['Spell2', 'Sword_Attack', 'Attack2', 'Dagger_Attack2', 'Staff_Attack', 'Punch'],
+  light: ['Sword_AttackFast', 'Dagger_Attack', 'Attack', 'Staff_Attack', 'Bow_Attack_Shoot', 'Spell1', 'Punch'],
+  heavy: ['Sword_Attack', 'Dagger_Attack2', 'Attack2', 'Spell2', 'Staff_Attack', 'Bow_Attack_Shoot', 'Punch'],
+  ult: ['Spell2', 'Sword_Attack', 'Attack2', 'Dagger_Attack2', 'Staff_Attack', 'Bow_Attack_Shoot', 'Punch'],
+  jump: ['JumpFlip', 'Jump', 'Roll'],
   hit: ['RecieveHit', 'RecieveHit_Attacking'],
   block: ['RecieveHit_Attacking', 'Idle_Attacking', 'Idle'],
   death: ['Death'],
@@ -52,7 +53,9 @@ export class Character {
     this.element = def.element;
     this.maxHp = def.maxHp;
     this.hp = def.maxHp;
-    this.energy = 20;
+    this.energy = ENERGY.start;
+    this.velY = 0;          // vận tốc rơi/nhảy
+    this.landed = false;    // true đúng 1 frame khi chạm đất (Game làm bụi)
     this.moveSpeed = def.moveSpeed;
     this.alive = true;
 
@@ -176,12 +179,32 @@ export class Character {
 
   get x() { return this.pos.x; }
   get blocking() { return this.blockT > 0 && this.alive; }
+  get grounded() { return this.pos.y <= 0 && this.velY <= 0; }
 
   canCast(i) {
     if (!this.alive) return false;
     if (this.cooldowns[i] > 0) return false;
     const sk = this.def.skills[i];
-    if (sk.isUltimate && this.energy < 100) return false;
+    if (sk.isUltimate && this.energy < ENERGY.ultCost) return false;
+    return true;
+  }
+
+  canJump() {
+    return this.alive && !this.celebrating && this.grounded;
+  }
+
+  /** Nhảy (chỉ khi đang đứng trên đất). Trả về true nếu thành công */
+  jump() {
+    if (!this.canJump()) return false;
+    this.velY = JUMP.velocity;
+    this.pos.y = 0.001;
+    if (this.mixer) {
+      const airTime = (2 * JUMP.velocity) / JUMP.gravity;
+      const clip = this.actions[this.anim.jump]?.getClip();
+      const ts = clip ? clip.duration / airTime : 1;
+      this._play(this.anim.jump, { once: true, timeScale: ts, fade: 0.06 });
+      this.oneShotT = airTime;
+    }
     return true;
   }
 
@@ -204,7 +227,7 @@ export class Character {
   spendFor(i) {
     const sk = this.def.skills[i];
     this.cooldowns[i] = sk.cooldown;
-    if (sk.isUltimate) this.energy = 0;
+    if (sk.isUltimate) this.energy = Math.max(0, this.energy - ENERGY.ultCost);
     this.attackAnim = 0.35;
     this.blockT = 0; // ra chiêu thì hạ khiên
     const role = sk.isUltimate ? 'ult' : i === 0 ? 'light' : 'heavy';
@@ -253,6 +276,18 @@ export class Character {
     if (Math.abs(this.knockVel) < 0.01) this.knockVel = 0;
     this.pos.x += (this.moveInput * speed + this.knockVel) * dt;
     this.pos.x = Math.max(-halfBound, Math.min(halfBound, this.pos.x));
+    // Trọng lực (chạy cả khi đã chết để rơi xuống đất)
+    this.landed = false;
+    if (this.pos.y > 0 || this.velY > 0) {
+      this.velY -= JUMP.gravity * dt;
+      this.pos.y += this.velY * dt;
+      if (this.pos.y <= 0) {
+        this.pos.y = 0;
+        this.velY = 0;
+        this.landed = true;
+        if (this.mixer && this.alive && this.current === this.actions[this.anim.jump]) this.oneShotT = 0;
+      }
+    }
   }
 
   _updateShield(dt) {
@@ -288,6 +323,14 @@ export class Character {
     this.mesh.position.copy(this.pos);
     if (!this.bodyRoot) return;
     const ud = this.bodyRoot.userData;
+    // Đĩa dưới chân nằm yên trên sàn khi nhảy, nhỏ dần theo độ cao (như bóng đổ)
+    if (ud.discs) {
+      const k = Math.max(0.45, 1 - this.pos.y * 0.15);
+      ud.discs.forEach((d, i) => {
+        d.position.y = 0.02 + i * 0.01 - this.pos.y;
+        d.scale.setScalar(k);
+      });
+    }
 
     // Xoay mượt về phía đối thủ
     if (this.alive && !this.celebrating) {

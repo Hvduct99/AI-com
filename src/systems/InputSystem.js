@@ -1,7 +1,7 @@
 // ============================================================
 // InputSystem — gom phím 2 người chơi.
-// P1: A/D di chuyển, S đỡ, Q/W/E chiêu 1-3, R tuyệt chiêu
-// P2: ←/→ di chuyển, ↓ đỡ, H/J/K chiêu 1-3, L tuyệt chiêu
+// P1: A/D di chuyển, X nhảy, S đỡ, Q/W/E chiêu 1-3, R tuyệt chiêu
+// P2: ←/→ di chuyển, ↑ nhảy, ↓ đỡ, H/J/K chiêu 1-3, L tuyệt chiêu
 // Dùng e.code (vị trí phím vật lý) => không bị Unikey/Telex,
 // CapsLock hay layout bàn phím làm hỏng điều khiển.
 // Chế độ 1 người (đấu máy): phím của P2 cũng điều khiển P1.
@@ -9,15 +9,16 @@
 // ============================================================
 
 export const BLOCK_INDEX = -1; // index đặc biệt trong skillQueue = Đỡ
+export const JUMP_INDEX = -2;  // = Nhảy
 
 const P1_MOVE = { KeyA: -1, KeyD: 1 };
 const P2_MOVE = { ArrowLeft: -1, ArrowRight: 1 };
-const P1_SKILLS = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3, KeyS: BLOCK_INDEX };
-const P2_SKILLS = { KeyH: 0, KeyJ: 1, KeyK: 2, KeyL: 3, ArrowDown: BLOCK_INDEX };
+const P1_SKILLS = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3, KeyS: BLOCK_INDEX, KeyX: JUMP_INDEX };
+const P2_SKILLS = { KeyH: 0, KeyJ: 1, KeyK: 2, KeyL: 3, ArrowDown: BLOCK_INDEX, ArrowUp: JUMP_INDEX };
 const GAME_KEYS = new Set([
   ...Object.keys(P1_MOVE), ...Object.keys(P2_MOVE),
   ...Object.keys(P1_SKILLS), ...Object.keys(P2_SKILLS),
-  'Space', 'ArrowUp',
+  'Space',
 ]);
 
 export class InputSystem {
