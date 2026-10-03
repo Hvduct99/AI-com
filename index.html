@@ -22,6 +22,7 @@
       <div class="mode-row">
         <button type="button" class="pill" data-mode="pvp">👥 2 Người</button>
         <button type="button" class="pill" data-mode="cpu">🤖 Đấu Máy</button>
+        <button type="button" class="pill" data-mode="campaign">⚔️ Chinh Phạt</button>
       </div>
       <div class="mode-row" id="level-row">
         <button type="button" class="pill small" data-level="easy">Dễ</button>
@@ -39,6 +40,7 @@
           <h2 id="p2-title">Player 2</h2>
           <div class="char-list" data-player="2"></div>
           <div class="picked" id="picked-2">Chưa chọn</div>
+          <div class="campaign-list hidden" id="campaign-list"></div>
         </div>
       </div>
 
@@ -58,6 +60,7 @@
         </div>
         <div class="center-info">
           <div class="timer" id="timer">99</div>
+          <div class="stage-badge hidden" id="stage-badge"></div>
           <div class="top-buttons">
             <button type="button" class="icon-btn" id="pause-btn" title="Tạm dừng (Esc)">⏸</button>
             <button type="button" class="icon-btn" id="mute-btn" title="Bật/tắt âm thanh">🔊</button>
@@ -107,6 +110,7 @@
         <h1 id="winner-text"></h1>
         <p id="winner-sub"></p>
         <div class="overlay-buttons">
+          <button type="button" class="btn primary hidden" id="next-btn">ẢI TIẾP THEO ▶</button>
           <button type="button" class="btn primary" id="restart-btn">CHƠI LẠI</button>
           <button type="button" class="btn" id="menu-btn">CHỌN TƯỚNG</button>
         </div>

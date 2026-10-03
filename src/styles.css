@@ -201,6 +201,44 @@ button { font-family: inherit; color: inherit; }
   background: rgba(255,215,0,0.9);
   z-index: 2;
 }
+/* Chinh Phạt */
+.campaign-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.stage {
+  --el: #888;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border: 2px solid #3a3a55;
+  border-left: 5px solid var(--el);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.12s, border-color 0.12s;
+}
+.stage:hover:not(:disabled) { transform: translateX(3px); border-color: #888; }
+.stage.selected { border-color: #ffd700; background: rgba(255,215,0,0.12); box-shadow: 0 0 12px rgba(255,215,0,0.35); }
+.stage.locked { opacity: 0.4; cursor: not-allowed; }
+.stage.boss { background: linear-gradient(90deg, rgba(180,20,20,0.25), rgba(255,255,255,0.03)); }
+.stage-no { font-weight: 800; color: #ffd27a; min-width: 44px; font-size: 13px; }
+.stage-face { width: 34px; height: 34px; object-fit: contain; font-size: 24px; text-align: center; flex-shrink: 0; }
+.stage-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.stage-info b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage-info small { color: #aaa; font-size: 11px; }
+.stage-status { font-size: 18px; }
+.stage-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd27a;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid #ffd27a88;
+  border-radius: 6px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+#center-text.title { font-size: clamp(30px, 6vw, 72px); color: #ffd27a; letter-spacing: 3px; padding: 0 16px; }
+
 .style-tag { display: inline-block; padding: 0 4px; border-radius: 4px; font-weight: 700; font-size: 9px; }
 .style-tag.melee { background: #b71c1c; color: #fff; }
 .style-tag.ranged { background: #1565c0; color: #fff; }

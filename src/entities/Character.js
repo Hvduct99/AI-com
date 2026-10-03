@@ -57,6 +57,7 @@ export class Character {
     this.velY = 0;          // vận tốc rơi/nhảy
     this.landed = false;    // true đúng 1 frame khi chạm đất (Game làm bụi)
     this.moveSpeed = def.moveSpeed;
+    this.dmgMul = 1;   // hệ số sát thương (tướng địch ở Chinh Phạt mạnh dần)
     this.alive = true;
 
     this.cooldowns = [0, 0, 0, 0];

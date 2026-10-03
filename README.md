@@ -18,6 +18,30 @@
 Tướng cận chiến: chém tầm ngắn (~2-4 đơn vị), sát thương cao, hồi chiêu nhanh; chiêu 3 và
 tuyệt chiêu lao tới. Nhát chém triệt tiêu được đạn thường của đối thủ.
 
+## Chế độ chơi
+
+- **2 Người** — chung 1 bàn phím.
+- **Đấu Máy** — chọn tướng địch (hoặc ngẫu nhiên) và độ khó Dễ / Thường / Khó.
+- **Chinh Phạt** — 10 ải khó dần theo các trận Tam Quốc. Thắng ải trước mới mở ải sau,
+  tiến độ được lưu trong trình duyệt. AI mạnh dần (phản xạ, đỡ, né, độ hung hăng) và
+  tướng địch được tăng máu/sát thương ở các ải sau. Ải 10 là trùm (máu ×1.5).
+
+| Ải | Trận | Tướng địch |
+|---|---|---|
+| 1 | Khăn Vàng Khởi Nghĩa | Trương Phi |
+| 2 | Hổ Lao Quan | Hứa Chử |
+| 3 | Đại Chiến Từ Châu | Tôn Thượng Hương |
+| 4 | Quan Độ | Điển Vi |
+| 5 | Trường Bản Pha | Triệu Vân |
+| 6 | Xích Bích | Chu Du |
+| 7 | Đồng Quan | Mã Siêu |
+| 8 | Phàn Thành | Quan Vũ |
+| 9 | Ngũ Trượng Nguyên | Gia Cát Lượng |
+| 10 | Thiên Hạ Vô Song (trùm) | Lữ Bố |
+
+Nếu bạn chọn trùng tướng địch của ải, ải đó dùng một tướng thay thế. Sửa ải trong
+`src/config/campaign.js`.
+
 ## Điều khiển
 
 | | Di chuyển | Nhảy | Đỡ | Chiêu 1-3 | Tuyệt chiêu |

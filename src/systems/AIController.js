@@ -7,16 +7,26 @@ import { HALF_BOUND, EDGE_MARGIN } from '../entities/Arena.js';
 import { BLOCK, ENERGY } from '../config/characters.js';
 import { BLOCK_INDEX, JUMP_INDEX } from './InputSystem.js';
 
-// lead: giơ khiên trước khi trúng bao nhiêu giây (< 0.18s = đỡ hoàn hảo)
-const LEVELS = {
-  easy:   { think: 0.9,  defend: 0.2,  blockPref: 0.3, jumpPref: 0.25, lead: [0.12, 0.45], aggro: 0.45, jitter: 0.6 },
-  normal: { think: 0.55, defend: 0.5,  blockPref: 0.45, jumpPref: 0.3, lead: [0.08, 0.35], aggro: 0.65, jitter: 0.35 },
-  hard:   { think: 0.28, defend: 0.85, blockPref: 0.5, jumpPref: 0.35, lead: [0.04, 0.26], aggro: 0.85, jitter: 0.15 },
-};
+// Độ khó liên tục 0..1: nội suy giữa MIN (rất dễ) và MAX (cực khó).
+// lead: phản ứng trước khi trúng bao nhiêu giây (< 0.18s = đỡ hoàn hảo)
+const MIN = { think: 1.0, defend: 0.12, blockPref: 0.3, jumpPref: 0.2, lead: [0.16, 0.5], aggro: 0.38, jitter: 0.7 };
+const MAX = { think: 0.2, defend: 0.95, blockPref: 0.55, jumpPref: 0.35, lead: [0.03, 0.18], aggro: 0.95, jitter: 0.1 };
+const NAMED = { easy: 0.15, normal: 0.5, hard: 0.85 };
+
+const lerp = (a, b, t) => a + (b - a) * t;
+export function aiParams(difficulty) {
+  const t = Math.max(0, Math.min(1, typeof difficulty === 'number' ? difficulty : (NAMED[difficulty] ?? 0.5)));
+  const p = {};
+  for (const k of Object.keys(MIN)) {
+    p[k] = Array.isArray(MIN[k]) ? MIN[k].map((v, i) => lerp(v, MAX[k][i], t)) : lerp(MIN[k], MAX[k], t);
+  }
+  return p;
+}
 
 export class AIController {
+  /** @param {'easy'|'normal'|'hard'|number} level - tên mức hoặc số 0..1 */
   constructor(level = 'normal') {
-    this.p = LEVELS[level] ?? LEVELS.normal;
+    this.p = aiParams(level);
     this.axis = 0;
     this.moveT = 0;
     this.thinkT = 0.8;

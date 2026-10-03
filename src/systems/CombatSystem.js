@@ -79,7 +79,7 @@ export class CombatSystem {
     if (target.blocking) {
       const perfect = target.blockAge <= BLOCK.perfectWindow;
       const chip = perfect ? 0 : (big ? BLOCK.ultChip : BLOCK.chip);
-      const dmg = Math.round(p.skill.damage * mult * chip);
+      const dmg = Math.round(p.skill.damage * mult * atk.dmgMul * chip);
       if (dmg > 0) target.takeDamage(dmg, true, false);
       target.applyKnockback(p.dir, perfect ? 0.5 : (big ? 4 : 1.2));
       if (perfect) target.healEnergy(BLOCK.perfectRefund);
@@ -94,7 +94,7 @@ export class CombatSystem {
       return;
     }
 
-    const dmg = Math.max(1, Math.round(p.skill.damage * mult));
+    const dmg = Math.max(1, Math.round(p.skill.damage * mult * atk.dmgMul));
     target.takeDamage(dmg, true, true);
     target.applyKnockback(p.dir, big ? 9 : 2.5 + p.skill.damage * 0.18);
     // Năng lượng: người đánh hồi, người bị đánh cũng hồi chút để lật kèo

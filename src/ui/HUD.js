@@ -153,6 +153,13 @@ export class HUD {
     el.classList.add('pop');
   }
 
+  setBadge(text) {
+    const el = $('stage-badge');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('hidden', !text);
+  }
+
   showWinner(text, sub = '') {
     this.el.winner.textContent = text;
     this.el.sub.textContent = sub;

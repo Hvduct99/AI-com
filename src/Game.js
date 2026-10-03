@@ -90,6 +90,7 @@ export class Game {
     this.timeLeft = ROUND_TIME;
     this.denyCd = [0, 0];
     this.onPauseChange = null;
+    this.onEnd = null;      // (result) => gọi khi bảng kết quả hiện ra
     this._raf = 0;
     this._prewarmed = false;
     this.clock = new THREE.Clock(false);
@@ -99,7 +100,7 @@ export class Game {
     this._onResize();
     this._loop = this._loop.bind(this);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && !this.paused && (this.state === 'fight' || this.state === 'countdown')) {
+      if (document.hidden && !this.paused && ['fight', 'countdown', 'intro'].includes(this.state)) {
         this.togglePause();
       }
     });
@@ -132,7 +133,14 @@ export class Game {
     this.fx.clear();
   }
 
-  start(p1def, p2def, { cpu = null } = {}) {
+  /**
+   * @param {object} opts
+   *   cpu      : null (2 người) | 'easy'|'normal'|'hard' | số 0..1 (độ khó AI)
+   *   foeHpMul / foeDmgMul : nhân máu / sát thương tướng địch (Chinh Phạt)
+   *   intro    : chữ giới thiệu ải trước khi đếm ngược
+   *   badge    : nhãn nhỏ dưới đồng hồ (vd "ẢI 3/10")
+   */
+  start(p1def, p2def, { cpu = null, foeHpMul = 1, foeDmgMul = 1, intro = null, badge = null } = {}) {
     for (const f of this.fighters) f.dispose(this.scene);
     for (const p of this.projectiles) p.kill();
     this.fx.clear();
@@ -148,14 +156,22 @@ export class Game {
     const f2 = new Character(this.scene, p2def, -1);
     f1.setMesh(AssetBuilders.CharacterBuilder(p1def));
     f2.setMesh(AssetBuilders.CharacterBuilder(p2def));
+    if (foeHpMul !== 1) {
+      f2.maxHp = Math.round(p2def.maxHp * foeHpMul);
+      f2.hp = f2.maxHp;
+    }
+    f2.dmgMul = foeDmgMul;
     f1.update(0); f2.update(0);
     this.fighters = [f1, f2];
-    this.ai = cpu ? new AIController(cpu) : null;
-    this.input.singlePlayer = !!cpu;
-    this.hud.setup(p1def, p2def, !!cpu);
+    this.ai = cpu !== null && cpu !== undefined ? new AIController(cpu) : null;
+    this.input.singlePlayer = !!this.ai;
+    this.hud.setup(p1def, p2def, !!this.ai);
+    this.hud.setBadge(badge);
     this.input.reset();
     this.input.enabled = false;
-    this._setState('countdown');
+    this.intro = intro;
+    this.result = null;
+    this._setState(intro ? 'intro' : 'countdown');
     this._prewarm();
 
     cancelAnimationFrame(this._raf);
@@ -320,8 +336,11 @@ export class Game {
     this.stateT += realDt;
     for (let i = 0; i < 2; i++) if (this.denyCd[i] > 0) this.denyCd[i] -= realDt;
 
-    // --- Đếm ngược ---
-    if (this.state === 'countdown') {
+    // --- Giới thiệu ải (Chinh Phạt) -> Đếm ngược ---
+    if (this.state === 'intro') {
+      this.hud.center(this.intro, 'title');
+      if (this.stateT > 1.8) { this.hud.center(''); this._setState('countdown'); }
+    } else if (this.state === 'countdown') {
       const n = 3 - Math.floor(this.stateT / 0.8);
       if (n >= 1) {
         if (this.hud.cache.center !== String(n)) this.audio?.beep(false);
@@ -408,6 +427,7 @@ export class Game {
         this._shown = true;
         this.hud.center('');
         this.hud.showWinner(this.endText, this.endSub);
+        this.onEnd?.(this.result);
       }
     }
   }
@@ -439,5 +459,7 @@ export class Game {
     }
     this.winner = winner;
     this.endText = winner ? `${winner.def.icon} ${winner.def.name.toUpperCase()} THẮNG!` : 'HÒA!';
+    // 1 = người chơi bên trái thắng, 2 = bên phải thắng, 0 = hòa
+    this.result = { winner: winner === f1 ? 1 : winner === f2 ? 2 : 0 };
   }
 }
