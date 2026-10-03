@@ -39,6 +39,20 @@ export class CharacterSelect {
     this._refresh();
   }
 
+  /** Thay emoji bằng ảnh chân dung 3D: { [id]: dataURL } */
+  setPortraits(map) {
+    document.querySelectorAll('.char-card').forEach((card) => {
+      const url = map[card.dataset.id];
+      const icon = card.querySelector('.icon');
+      if (!url || !icon) return;
+      const img = new Image();
+      img.src = url;
+      img.alt = '';
+      img.className = 'portrait';
+      icon.replaceWith(img);
+    });
+  }
+
   setError(msg) {
     this.error = msg;
     this._refresh();
@@ -94,10 +108,10 @@ export class CharacterSelect {
     this.levelRow.classList.toggle('hidden', !cpu);
     this.p2Title.innerHTML = cpu
       ? 'Máy <span class="hint">(bỏ trống = ngẫu nhiên)</span>'
-      : 'Player 2 <span class="hint">(← → di chuyển • U I O P chiêu)</span>';
+      : 'Player 2 <span class="hint">(← → đi • ↓ đỡ • H J K chiêu • L tuyệt chiêu)</span>';
     this.p1Hint.textContent = cpu
-      ? '(A D / ← → di chuyển • Q W E R / U I O P chiêu)'
-      : '(A D di chuyển • Q W E R chiêu)';
+      ? '(A D / ← → đi • S / ↓ đỡ • Q W E / H J K chiêu • R / L tuyệt chiêu)'
+      : '(A D đi • S đỡ • Q W E chiêu • R tuyệt chiêu)';
 
     for (const player of [1, 2]) {
       this.lists[player].querySelectorAll('.char-card').forEach((el) => {

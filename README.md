@@ -1,24 +1,44 @@
-# NGŨ HÀNH CHIẾN — Game đối kháng 3D (Three.js + Vite)
+# NGŨ HÀNH CHIẾN — Game đối kháng 3D Tam Quốc (Three.js + Vite)
 
-Game đối kháng 2 người chơi trên 1 máy, đúng theo bản vẽ tay:
-- HUD trên: tên + thanh máu (đỏ) + thanh năng lượng (xanh) mỗi bên
-- HUD dưới: 4 skill slot, skill 4 (ultimate) TO NHẤT, viền vàng
-- P1: `A/D` di chuyển + `Q/W/E/R` skill 1-4
-- P2: `←/→` di chuyển + `U/I/O/P` skill 1-4
-- 2 biên 2 bên: chạm biên mất máu + bị đẩy ra
-- Ngũ hành khắc chế: Kim→Mộc→Thổ→Thủy→Hỏa→Kim (x1.5 dmg)
-- Skill va chạm nhau trên không (triệt tiêu / ultimate phá đạn thường)
-- Chọn nhân vật trước khi đánh
-- Chế độ **Đấu Máy** (Dễ/Thường/Khó) — chơi 1 người, điện thoại có nút cảm ứng
-- Đếm ngược 3-2-1, đồng hồ 99 giây (hết giờ: bên nhiều % máu hơn thắng), K.O. slow-motion
-- `Esc`: tạm dừng (đánh lại / chọn tướng). Nút 🔊 bật/tắt âm thanh
+5 tướng Tam Quốc, mỗi người một hệ ngũ hành, đánh nhau trên lôi đài trước cổng tam quan.
+
+| Tướng | Hệ | Vũ khí | Tuyệt chiêu |
+|---|---|---|---|
+| Triệu Vân | Kim | Long Đảm Ngân Thương | Long Đảm Phá Trận |
+| Quan Vũ | Mộc | Thanh Long Yển Nguyệt Đao | Thanh Long Yển Nguyệt |
+| Gia Cát Lượng | Thủy | Quạt lông vũ | Thủy Long Ngâm |
+| Chu Du | Hỏa | Trường kiếm | Xích Bích Hỏa Công |
+| Trương Phi | Thổ | Trượng Bát Xà Mâu | Đại Náo Trường Bản Kiều |
+
+## Điều khiển
+
+| | Di chuyển | Đỡ | Chiêu 1-3 | Tuyệt chiêu |
+|---|---|---|---|---|
+| Player 1 | `A` `D` | `S` | `Q` `W` `E` | `R` |
+| Player 2 | `←` `→` | `↓` | `H` `J` `K` | `L` |
+
+- Đấu Máy: dùng được cả hai bộ phím. Điện thoại có nút cảm ứng.
+- `Esc`: tạm dừng. Nút 🔊: bật/tắt âm thanh.
+
+## Luật
+
+- Ngũ hành khắc chế: Kim→Mộc→Thổ→Thủy→Hỏa→Kim (+35% sát thương, bị khắc −15%)
+- **Đỡ**: tốn 12 năng lượng, hồi chiêu 0.45s (dùng liên tục được nếu đủ năng lượng).
+  Đỡ trúng chỉ mất 20% sát thương (tuyệt chiêu: 45%). Giơ khiên sát lúc trúng (≤0.18s) =
+  **ĐỠ HOÀN HẢO**: không mất máu, hoàn 10 năng lượng. Đang đỡ thì đi chậm.
+- Tuyệt chiêu cần đầy nộ, phá được đạn thường, xuyên qua người.
+- Đạn hai bên va nhau thì triệt tiêu. Đứng sát biên đỏ: mất máu + bị đẩy ra.
+- 99 giây, hết giờ bên còn nhiều % máu hơn thắng.
 
 ## Asset (đều CC0 — dùng thương mại thoải mái)
 
-- `public/models/RobotExpressive.glb` — Tomás Laulhé (Quaternius), chỉnh sửa bởi Don McCurdy (mẫu three.js). Nhuộm màu theo hệ, animation Idle/Walking/Punch/Death/Dance
+- `public/models/heroes/*.glb` — bộ "RPG Characters" của Quaternius (quaternius.com,
+  bản trên OpenGameArt), chuyển FBX → GLB và nhúng texture.
 - `public/textures/floor_*.jpg` — Poly Haven "Stone Tiles"
-- Âm thanh: tổng hợp trực tiếp bằng WebAudio (`src/systems/AudioSystem.js`), không cần file
-- Nếu model/texture tải lỗi, game tự dùng nhân vật procedural — vẫn chơi được
+- Vũ khí, cờ lưng (chữ 趙 關 周 張), cổng 三國五行, cờ 魏 蜀 吳 漢, đèn lồng,
+  hiệu ứng chiêu: dựng bằng code trong `src/utils/AssetLoader.js`
+- Âm thanh: tổng hợp bằng WebAudio (`src/systems/AudioSystem.js`), không cần file
+- Nếu model/texture tải lỗi, game tự dùng nhân vật dựng sẵn — vẫn chơi được
 
 ## Chạy dev
 
@@ -35,49 +55,34 @@ Mở http://localhost:5173
 npm run build
 ```
 
-Lấy toàn bộ file trong `dist/` upload lên `public_html/` (File Manager hoặc FTP).
+Upload **toàn bộ nội dung** `dist/` lên `public_html/`, ghi đè `index.html` cũ.
 Xem chi tiết ở `DEPLOY_HOSTINGER.md`.
 
-## Thay asset 3D sau này (đã thiết kế sẵn)
+## Tùy biến
 
-Mọi mesh đều đi qua `src/utils/AssetLoader.js`:
-
-```js
-import { registerAssets } from './src/utils/AssetLoader.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-const loader = new GLTFLoader();
-registerAssets({
-  CharacterBuilder: (def) => {
-    // return Group chứa model của bạn cho def.id / def.element
-    // Ví dụ load 'assets/kim-linh.glb'
-  },
-  ProjectileBuilder: (skill, element) => { /* ... */ },
-  ArenaBuilder: (width) => { /* { floor, grid, wallL, wallR } */ },
-});
-```
-
-- Thêm nhân vật mới: thêm object vào `CHARACTERS` trong `src/config/characters.js`
-- Cân bằng damage/khắc chế: sửa `src/config/elements.js`
-- Luật biên (DPS, lực đẩy): sửa hằng số ở `src/entities/Arena.js`
+- Thêm/sửa tướng: `CHARACTERS` trong `src/config/characters.js`
+  (`model` = file trong `public/models/heroes/`, `weapon`, `tint`, `banner`)
+- Thông số Đỡ: `BLOCK` trong `src/config/characters.js`
+- Cân bằng khắc chế: `src/config/elements.js`
+- Luật biên: hằng số trong `src/entities/Arena.js`
 
 ## Cấu trúc
 
 ```
 src/
-  main.js               entry
-  Game.js               vòng lặp trận đấu
-  config/elements.js    ngũ hành + khắc chế
-  config/characters.js  5 nhân vật + 4 skill mỗi người
-  entities/Character.js võ sĩ (logic, không dính mesh cụ thể)
-  entities/Skill.js     đạn projectile
-  entities/Arena.js     sàn + 2 biên
-  systems/InputSystem.js   phím QWER / UIOP
-  systems/CombatSystem.js  va chạm, damage, knockback
-  systems/EffectSystem.js  particle, chữ damage
+  main.js                  entry
+  Game.js                  vòng lặp trận đấu, camera, đếm ngược, kết thúc
+  config/elements.js       ngũ hành + khắc chế
+  config/characters.js     5 tướng + 4 chiêu + thông số Đỡ
+  entities/Character.js    tướng: animation, khiên, máu/năng lượng
+  entities/Skill.js        đạn chiêu
+  entities/Arena.js        lôi đài + 2 biên
+  systems/InputSystem.js   bàn phím + nút cảm ứng
+  systems/CombatSystem.js  va chạm, sát thương, Đỡ
+  systems/EffectSystem.js  hạt, vòng sóng, cột sáng, chữ bay
   systems/AIController.js  AI đấu máy
   systems/AudioSystem.js   âm thanh WebAudio
-  ui/HUD.js             máu/năng lượng/skill slot
-  ui/CharacterSelect.js màn chọn tướng
-  utils/AssetLoader.js  ĐIỂM THAY ASSET DUY NHẤT
+  ui/HUD.js                máu/năng lượng/ô chiêu
+  ui/CharacterSelect.js    màn chọn tướng
+  utils/AssetLoader.js     model, vũ khí, hiệu ứng, phông nền
 ```

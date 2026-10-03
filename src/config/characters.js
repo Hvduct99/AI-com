@@ -1,17 +1,31 @@
 // ============================================================
-// Danh sách nhân vật. Mỗi nhân vật = 1 hệ ngũ hành + 4 skill.
-// Muốn thêm nhân vật mới: thêm 1 object vào CHARACTERS.
-// Muốn thay asset 3D: xem utils/AssetLoader.js
+// Danh sách tướng (Tam Quốc). Mỗi tướng = 1 hệ ngũ hành + 4 chiêu + Đỡ.
+// Muốn thêm tướng mới: thêm 1 object vào CHARACTERS.
+//   model  : file public/models/heroes/<model>.glb
+//   weapon : spear | glaive | fan | jian | serpent (vũ khí dựng sẵn)
+//   tint   : nhân màu lên texture để thấy rõ hệ
+//   banner : chữ Hán trên cờ lưng (null = không đeo cờ)
 // ============================================================
 import { ELEMENTS } from './elements.js';
 
-// Sát thương gốc từ yếu -> mạnh (skill 4 = ultimate)
-// Đã cân bằng lại: TTK ~25-30s thay vì ~8s chết
+// Sát thương gốc từ yếu -> mạnh (skill 4 = tuyệt chiêu)
 const BASE_DAMAGE = [6, 10, 15, 30];
 const BASE_COOLDOWN = [1.1, 2.6, 4.5, 9.0];
 const BASE_SPEED = [11, 10, 8.5, 7];
 const BASE_SIZE = [0.28, 0.38, 0.52, 0.85];
 const BASE_ENERGY_GAIN = [8, 10, 12, 0]; // đánh trúng được hồi năng lượng
+
+// Đỡ: tốn năng lượng, hồi chiêu rất nhanh (dùng được nhiều lần),
+// đỡ trúng chỉ mất một phần nhỏ máu. Đỡ sát lúc trúng = HOÀN HẢO (0 sát thương).
+export const BLOCK = {
+  energyCost: 12,
+  cooldown: 0.45,
+  duration: 0.55,
+  perfectWindow: 0.18,
+  chip: 0.2,        // đạn thường xuyên qua khiên: còn 20% sát thương
+  ultChip: 0.45,    // tuyệt chiêu: còn 45%
+  perfectRefund: 10,
+};
 
 function makeSkills(elementId, names, icons) {
   return [0, 1, 2, 3].map((i) => ({
@@ -25,76 +39,95 @@ function makeSkills(elementId, names, icons) {
     size: BASE_SIZE[i],
     energyGain: BASE_ENERGY_GAIN[i],
     isUltimate: i === 3,
-    // ultimate yêu cầu đầy năng lượng, các skill thường không tốn
     energyCost: i === 3 ? 100 : 0,
   }));
 }
 
 export const CHARACTERS = [
   {
-    id: 'kim-linh',
-    name: 'Kim Linh',
-    title: 'Kiếm Khí Sắc Bén',
+    id: 'trieu-van',
+    name: 'Triệu Vân',
+    title: 'Thường Sơn Triệu Tử Long',
     element: 'kim',
-    icon: '⚙️',
+    icon: '🐉',
+    model: 'warrior',
+    weapon: 'spear',
+    tint: 0xeef2ff,
+    banner: '趙',
     maxHp: 300,
     moveSpeed: 5.2,
-    desc: 'Nhanh nhẹn, sát thương chuẩn. Khắc Mộc.',
+    desc: 'Ngân thương thần tốc, nhanh nhẹn nhất. Khắc Mộc.',
     skills: makeSkills('kim',
-      ['Phi Kiếm', 'Kiếm Vũ', 'Vạn Kiếm', 'Trảm Thiên Kiếm'],
-      ['🗡️', '⚔️', '🌪️', '💥']),
+      ['Ngân Thương Đâm', 'Bách Điểu Triều Phụng', 'Thất Tiến Thất Xuất', 'Long Đảm Phá Trận'],
+      ['🗡️', '🕊️', '⚔️', '🐉']),
   },
   {
-    id: 'moc-tinh',
-    name: 'Mộc Tinh',
-    title: 'Rừng Già Sinh Sôi',
+    id: 'quan-vu',
+    name: 'Quan Vũ',
+    title: 'Võ Thánh — Mỹ Nhiêm Công',
     element: 'moc',
-    icon: '🌿',
+    icon: '🌙',
+    model: 'monk',
+    weapon: 'glaive',
+    tint: 0xd2f2d0,
+    banner: '關',
     maxHp: 340,
     moveSpeed: 4.2,
-    desc: 'Trâu bò, hồi năng lượng nhanh. Khắc Thổ.',
+    desc: 'Thanh Long Yển Nguyệt Đao, trâu bò. Khắc Thổ.',
     skills: makeSkills('moc',
-      ['Dây Leo', 'Gai Nhọn', 'Rừng Gai', 'Thần Thụ Giáng Lâm'],
-      ['🌱', '🌵', '🌳', '💥']),
+      ['Thanh Long Trảm', 'Yển Nguyệt Phong', 'Quá Ngũ Quan', 'Thanh Long Yển Nguyệt'],
+      ['🌙', '🍃', '🏯', '🐲']),
   },
   {
-    id: 'thuy-co',
-    name: 'Thủy Cơ',
-    title: 'Sóng Nước Linh Hoạt',
+    id: 'gia-cat-luong',
+    name: 'Gia Cát Lượng',
+    title: 'Ngọa Long tiên sinh',
     element: 'thuy',
-    icon: '💧',
-    maxHp: 320,
+    icon: '🪶',
+    model: 'wizard',
+    weapon: 'fan',
+    tint: 0xd6e8ff,
+    banner: null,
+    maxHp: 310,
     moveSpeed: 4.8,
-    desc: 'Cân bằng, đạn bay nhanh. Khắc Hỏa.',
+    desc: 'Quạt lông vũ, mưu lược, đạn bay nhanh. Khắc Hỏa.',
     skills: makeSkills('thuy',
-      ['Bọt Nước', 'Sóng Đẩy', 'Xoáy Nước', 'Hải Thần Nộ'],
-      ['💦', '🌊', '🌀', '💥']),
+      ['Thủy Tiễn', 'Bát Quái Trận', 'Mượn Gió Đông', 'Thủy Long Ngâm'],
+      ['💧', '☯️', '🌀', '🌊']),
   },
   {
-    id: 'hoa-viem',
-    name: 'Hỏa Viêm',
-    title: 'Ngọn Lửa Bùng Nổ',
+    id: 'chu-du',
+    name: 'Chu Du',
+    title: 'Đại Đô Đốc Đông Ngô',
     element: 'hoa',
     icon: '🔥',
+    model: 'rogue',
+    weapon: 'jian',
+    tint: 0xffd6c8,
+    banner: '周',
     maxHp: 320,
     moveSpeed: 4.6,
-    desc: 'Sát thương cao nhất. Khắc Kim.',
+    desc: 'Hỏa công Xích Bích, sát thương bùng nổ. Khắc Kim.',
     skills: makeSkills('hoa',
-      ['Lửa Nhỏ', 'Cầu Lửa', 'Bão Lửa', 'Phượng Hoàng Lửa'],
-      ['🔥', '☄️', '🌋', '💥']),
+      ['Hỏa Tiễn', 'Liên Hoàn Kế', 'Hỏa Thuyền', 'Xích Bích Hỏa Công'],
+      ['🔥', '⛓️', '⛵', '☄️']),
   },
   {
-    id: 'tho-quai',
-    name: 'Thổ Quái',
-    title: 'Núi Đá Vững Chắc',
+    id: 'truong-phi',
+    name: 'Trương Phi',
+    title: 'Mãnh tướng Yên Nhân',
     element: 'tho',
-    icon: '🪨',
+    icon: '⛰️',
+    model: 'cleric',
+    weapon: 'serpent',
+    tint: 0xd8c098,
+    banner: '張',
     maxHp: 380,
     moveSpeed: 3.8,
-    desc: 'Tank cứng nhất, đi chậm. Khắc Thủy.',
+    desc: 'Trượng Bát Xà Mâu, cứng nhất, đi chậm. Khắc Thủy.',
     skills: makeSkills('tho',
-      ['Ném Đá', 'Cột Đất', 'Địa Chấn', 'Thái Sơn Áp Đỉnh'],
-      ['🪨', '⛰️', '🌍', '💥']),
+      ['Xà Mâu Đâm', 'Địa Chấn Quyền', 'Gầm Trường Bản', 'Đại Náo Trường Bản Kiều'],
+      ['🐍', '👊', '🗣️', '⛰️']),
   },
 ];
 

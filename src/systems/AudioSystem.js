@@ -107,6 +107,24 @@ export class AudioSystem {
     this._noise(0.2, 0.25, 'highpass', 4000, 2000);
   }
 
+  shieldUp() {
+    if (!this._ok('shield', 0.08)) return;
+    this._tone('sine', 300, 600, 0.12, 0.12);
+    this._noise(0.12, 0.08, 'bandpass', 1200, 2400);
+  }
+
+  block(perfect) {
+    if (!this._ok('block', 0.04)) return;
+    if (perfect) {
+      this._tone('triangle', 1568, 1568, 0.3, 0.18);
+      this._tone('triangle', 2093, 2093, 0.35, 0.12, 0.05);
+      this._noise(0.15, 0.2, 'highpass', 5000, 3000);
+    } else {
+      this._tone('square', 700, 500, 0.1, 0.1);
+      this._noise(0.12, 0.25, 'bandpass', 2500, 1200);
+    }
+  }
+
   edge() {
     if (!this._ok('edge', 0.35)) return;
     this._tone('sawtooth', 90, 70, 0.25, 0.12);

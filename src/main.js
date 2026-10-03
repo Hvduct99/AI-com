@@ -5,7 +5,8 @@ import './styles.css';
 import { Game } from './Game.js';
 import { CharacterSelect } from './ui/CharacterSelect.js';
 import { AudioSystem } from './systems/AudioSystem.js';
-import { preloadAssets } from './utils/AssetLoader.js';
+import { preloadAssets, renderPortraits } from './utils/AssetLoader.js';
+import { CHARACTERS } from './config/characters.js';
 
 const $ = (id) => document.getElementById(id);
 const selectScreen = $('select-screen');
@@ -27,7 +28,9 @@ const select = new CharacterSelect({
     selectScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
     pauseOverlay.classList.add('hidden');
-    touchControls.classList.toggle('hidden', !(isTouch && opts.cpu));
+    const touchMode = isTouch && !!opts.cpu;
+    touchControls.classList.toggle('hidden', !touchMode);
+    gameScreen.classList.toggle('touch-mode', touchMode);
     game.start(p1def, p2def, opts);
   },
 });
@@ -89,6 +92,7 @@ touchControls.querySelectorAll('button[data-code]').forEach((btn) => {
 const fontsReady = document.fonts?.ready?.catch(() => {}) ?? Promise.resolve();
 Promise.all([preloadAssets((p) => select.setReady(false, p)), fontsReady])
   .then(() => {
+    try { select.setPortraits(renderPortraits(CHARACTERS)); } catch (e) { console.warn('[portraits]', e); }
     game = new Game($('game-canvas'), { audio });
     game.onPauseChange = (paused) => pauseOverlay.classList.toggle('hidden', !paused);
     if (import.meta.env.DEV) window.__game = game;

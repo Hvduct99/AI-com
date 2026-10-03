@@ -1,5 +1,5 @@
 // ============================================================
-// Skill.js — Đạn skill bay trên sàn đấu.
+// Skill.js — Đạn chiêu bay trên sàn đấu.
 // Mỗi lần bắn tạo 1 Projectile. Va chạm xử lý ở CombatSystem.
 // Mesh dùng geometry/material chung (AssetLoader) => không cần dispose.
 // ============================================================
@@ -24,12 +24,12 @@ export class Projectile {
 
     this.mesh = AssetBuilders.ProjectileBuilder(skill, skill.element);
     this.mesh.position.copy(origin);
+    this.mesh.rotation.y = dir > 0 ? 0 : Math.PI; // mesh dựng hướng +X
     this.baseY = origin.y;
     scene.add(this.mesh);
     this.vel = new THREE.Vector3(dir * skill.speed, 0, 0);
     this.t = 0;
-    // Ultimate to dần (có giới hạn)
-    this.grow = skill.isUltimate ? 0.35 : 0;
+    this.grow = skill.isUltimate ? 0.35 : 0; // tuyệt chiêu to dần (có giới hạn)
   }
 
   update(dt) {
@@ -38,11 +38,8 @@ export class Projectile {
     if (this.life <= 0) { this.kill(); return; }
     this.t += dt;
     this.mesh.position.addScaledVector(this.vel, dt);
-    this.mesh.position.y = this.baseY + Math.sin(this.t * 10) * 0.06;
-    this.mesh.rotation.z += dt * 6;
-    this.mesh.rotation.y += dt * 3;
-    const halo = this.mesh.userData.halo;
-    if (halo) halo.rotation.z -= dt * 5;
+    this.mesh.position.y = this.baseY + Math.sin(this.t * 10) * 0.05;
+    this.mesh.userData.animate?.(dt, this.t);
     if (this.grow > 0) {
       const s = Math.min(MAX_ULTI_SCALE, 1 + this.t * this.grow);
       this.mesh.scale.setScalar(s);
@@ -62,7 +59,7 @@ export function castSkill(scene, caster, skillIndex, projectiles) {
   if (!skill || !caster.canCast(skillIndex)) return null;
   caster.spendFor(skillIndex);
   const dir = caster.facing;
-  const origin = caster.pos.clone().add(new THREE.Vector3(dir * 0.9, 1.7, 0));
+  const origin = caster.pos.clone().add(new THREE.Vector3(dir * 1.0, 1.7, 0));
   const p = new Projectile(scene, caster, skill, origin, dir);
   projectiles.push(p);
   return p;

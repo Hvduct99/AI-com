@@ -4,6 +4,8 @@
 // Chỉ ghi DOM khi giá trị đổi (tránh layout thrash mỗi frame).
 // ============================================================
 
+import { BLOCK } from '../config/characters.js';
+
 const $ = (id) => document.getElementById(id);
 
 export class HUD {
@@ -22,7 +24,32 @@ export class HUD {
       sub: $('winner-sub'),
     };
     this.slots = { 1: [], 2: [] };
+    this.blockSlots = { 1: null, 2: null };
     this.cache = {};
+    this.flashEl = $('screen-flash');
+    // Nút cảm ứng của P1: 'b' = Đỡ, '0'..'3' = chiêu
+    this.touch = {};
+    document.querySelectorAll('#touch-controls button[data-idx]').forEach((btn) => {
+      this.touch[btn.dataset.idx] = { btn, cd: -1, ready: null, charged: null };
+    });
+  }
+
+  _touch(idx, cd, ready, charged = false) {
+    const t = this.touch[idx];
+    if (!t) return;
+    if (cd !== t.cd) { t.cd = cd; t.btn.style.setProperty('--cd', `${cd}%`); }
+    if (ready !== t.ready) { t.ready = ready; t.btn.classList.toggle('locked', !ready); }
+    if (charged !== t.charged) { t.charged = charged; t.btn.classList.toggle('charged', charged); }
+  }
+
+  /** Chớp màu toàn màn hình (khi ra tuyệt chiêu) */
+  flash(css) {
+    const el = this.flashEl;
+    if (!el) return;
+    el.style.background = `radial-gradient(circle at center, transparent 20%, ${css} 120%)`;
+    el.classList.remove('on');
+    void el.offsetWidth;
+    el.classList.add('on');
   }
 
   setup(p1def, p2def, p2IsCpu = false) {
@@ -30,15 +57,22 @@ export class HUD {
     this.el.name[2].textContent = `${p2def.icon} ${p2def.name}${p2IsCpu ? ' (Máy)' : ''}`;
     this.el.end.classList.add('hidden');
     this.cache = {};
-    this._buildSlots(1, p1def, ['Q', 'W', 'E', 'R']);
-    this._buildSlots(2, p2def, p2IsCpu ? ['', '', '', ''] : ['U', 'I', 'O', 'P']);
+    this._buildSlots(1, p1def, ['S', 'Q', 'W', 'E', 'R']);
+    this._buildSlots(2, p2def, p2IsCpu ? ['', '', '', '', ''] : ['↓', 'H', 'J', 'K', 'L']);
     this.setTimer(99);
     this.center('');
   }
 
-  _buildSlots(player, def, keys) {
+  _buildSlots(player, def, [blockKey, ...keys]) {
     const bar = this.el.skills[player];
     bar.innerHTML = '';
+    const b = document.createElement('div');
+    b.className = 'skill-slot block';
+    b.dataset.idx = 'b';
+    b.title = `Đỡ — tốn ${BLOCK.energyCost} năng lượng, đỡ đúng lúc = HOÀN HẢO`;
+    b.innerHTML = `<span class="key">${blockKey}</span><span class="icon">🛡️</span><div class="cd-mask"></div>`;
+    bar.appendChild(b);
+    this.blockSlots[player] = { root: b, mask: b.querySelector('.cd-mask'), cd: -1, ready: null, on: null };
     this.slots[player] = def.skills.map((sk, i) => {
       const d = document.createElement('div');
       d.className = 'skill-slot' + (sk.isUltimate ? ' ultimate' : '');
@@ -73,6 +107,16 @@ export class HUD {
       this.el.en[player].style.width = `${v}%`;
       this.el.en[player].classList.toggle('full', v >= 100);
     });
+    const bs = this.blockSlots[player];
+    if (bs) {
+      const cd = Math.ceil((f.blockCd / BLOCK.cooldown) * 10) * 10;
+      if (cd !== bs.cd) { bs.cd = cd; bs.mask.style.height = `${cd}%`; }
+      const ready = f.canBlock() || f.blocking;
+      if (ready !== bs.ready) { bs.ready = ready; bs.root.classList.toggle('locked', !ready); }
+      const on = f.blocking;
+      if (on !== bs.on) { bs.on = on; bs.root.classList.toggle('active', on); }
+      if (player === 1) this._touch('b', cd, ready, on);
+    }
     f.def.skills.forEach((sk, i) => {
       const slot = this.slots[player][i];
       if (!slot) return;
@@ -85,6 +129,7 @@ export class HUD {
         slot.charged = ready;
         slot.root.classList.toggle('charged', ready);
       }
+      if (player === 1) this._touch(String(i), cd, ready, sk.isUltimate && ready);
     });
   }
 

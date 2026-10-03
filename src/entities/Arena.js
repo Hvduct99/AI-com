@@ -52,9 +52,13 @@ export class Arena {
     this.t += dt;
     const pulse = 0.65 + Math.sin(this.t * 5) * 0.25;
     for (const mat of this.pulseMats) mat.opacity = pulse * 0.9;
-    const orbs = this.backdrop?.userData.orbs;
-    if (orbs) {
-      orbs.forEach((o, i) => { o.position.y = 6.8 + Math.sin(this.t * 1.5 + i) * 0.25; });
-    }
+    const ud = this.backdrop?.userData;
+    ud?.lanterns?.forEach((l, i) => {
+      l.rotation.z = Math.sin(this.t * 1.3 + i) * 0.08;
+      if (l.userData.glow) l.userData.glow.material.opacity = 0.45 + Math.sin(this.t * 7 + i * 2) * 0.08;
+    });
+    ud?.banners?.forEach((b, i) => {
+      b.userData.cloth.rotation.y = Math.sin(this.t * 1.7 + i) * 0.18;
+    });
   }
 }

@@ -7,13 +7,14 @@ import * as THREE from 'three';
 import { Character } from './entities/Character.js';
 import { castSkill } from './entities/Skill.js';
 import { Arena, HALF_BOUND } from './entities/Arena.js';
-import { InputSystem } from './systems/InputSystem.js';
+import { InputSystem, BLOCK_INDEX } from './systems/InputSystem.js';
 import { CombatSystem } from './systems/CombatSystem.js';
 import { EffectSystem } from './systems/EffectSystem.js';
 import { AIController } from './systems/AIController.js';
 import { HUD } from './ui/HUD.js';
 import { AssetBuilders, makeSkyTexture } from './utils/AssetLoader.js';
 import { ELEMENTS } from './config/elements.js';
+import { CHARACTERS } from './config/characters.js';
 
 const ROUND_TIME = 99;
 const MIN_SEPARATION = 1.3;
@@ -112,15 +113,20 @@ export class Game {
   }
 
   /** Biên dịch trước shader của đạn/chữ để lần bắn đầu tiên không bị khựng */
-  _prewarm(def) {
+  _prewarm() {
     if (this._prewarmed) return;
     this._prewarmed = true;
     const tmp = new THREE.Group();
-    tmp.add(AssetBuilders.ProjectileBuilder(def.skills[0], def.element));
-    tmp.add(AssetBuilders.ProjectileBuilder(def.skills[3], def.element));
+    for (const c of CHARACTERS) {
+      for (const sk of c.skills) tmp.add(AssetBuilders.ProjectileBuilder(sk, sk.element));
+    }
+    const shield = AssetBuilders.ShieldBuilder('kim');
+    shield.visible = true;
+    tmp.add(shield);
     tmp.position.set(0, 1.5, 0);
     this.scene.add(tmp);
     this.fx.hitText(new THREE.Vector3(0, -20, 0), ' ');
+    for (const r of [...this.fx.rings, ...this.fx.flashes, this.fx.pillar]) r.visible = true;
     try { this.renderer.compile(this.scene, this.camera); } catch { /* không quan trọng */ }
     this.scene.remove(tmp);
     this.fx.clear();
@@ -150,7 +156,7 @@ export class Game {
     this.input.reset();
     this.input.enabled = false;
     this._setState('countdown');
-    this._prewarm(p1def);
+    this._prewarm();
 
     cancelAnimationFrame(this._raf);
     this.running = true;
@@ -200,6 +206,10 @@ export class Game {
       this.audio?.hit(big);
       this.shake = Math.min(0.6, this.shake + (info.ultimate ? 0.45 : info.counter ? 0.25 : 0.1));
       if (big) this.hitStop = 0.07;
+    } else if (info.type === 'block') {
+      this.audio?.block(info.perfect);
+      this.shake = Math.min(0.6, this.shake + (info.perfect ? 0.2 : 0.08));
+      if (info.perfect) this.hitStop = 0.09;
     } else {
       this.audio?.clash();
       this.shake = Math.min(0.6, this.shake + 0.12);
@@ -224,6 +234,16 @@ export class Game {
   _castQueued(f1, f2) {
     for (const q of this.input.drainSkillQueue()) {
       const caster = q.player === 1 ? f1 : f2;
+      if (q.index === BLOCK_INDEX) {
+        if (caster.block()) {
+          this.audio?.shieldUp();
+        } else if (caster.alive && caster.blockCd <= 0 && this.denyCd[q.player - 1] <= 0) {
+          this.denyCd[q.player - 1] = 0.8;
+          this.fx.hitText(caster.pos.clone().setY(3.2), 'THIẾU NĂNG LƯỢNG!', '#90caf9', false);
+          this.audio?.denied();
+        }
+        continue;
+      }
       const skill = caster.def.skills[q.index];
       if (!skill) continue;
       if (!caster.canCast(q.index)) {
@@ -239,9 +259,12 @@ export class Game {
       if (!p) continue;
       this.audio?.cast(caster.element, skill.isUltimate);
       if (skill.isUltimate) {
-        this.fx.ultiFlash(ELEMENTS[caster.element].color, caster.pos.x);
-        this.fx.hitText(caster.pos.clone().setY(3.4), skill.name.toUpperCase() + '!', '#ffd700', true);
+        this.fx.ultiCast(caster.pos, caster.element);
+        this.fx.hitText(caster.pos.clone().setY(3.6), skill.name.toUpperCase() + '!', '#ffd700', true);
+        this.hud.flash(ELEMENTS[caster.element].css);
         this.shake = 0.55;
+      } else {
+        this.fx.muzzle(p.mesh.position, caster.element);
       }
     }
   }
@@ -266,7 +289,7 @@ export class Game {
     const mid = (f1.pos.x + f2.pos.x) / 2;
     const span = Math.abs(f1.pos.x - f2.pos.x);
     const tanH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-    const halfW = span / 2 + 3.4;
+    const halfW = span / 2 + (this.camera.aspect < 1 ? 2.3 : 3.4); // màn dọc: sát hơn
     const z = THREE.MathUtils.clamp(Math.max(halfW / (tanH * this.camera.aspect), 12.5), 12.5, 34);
     this._camTarget.set(mid * 0.7, 2.4 + z * 0.13, z);
     this._lookTarget.set(mid * 0.7, 1.8, 0);
@@ -345,7 +368,7 @@ export class Game {
         this.fx.burst(p.mesh.position, 0xffffff, 8, 3, 2);
         p.kill();
       }
-      if (p.alive) this.fx.trail(p.mesh.position, ELEMENTS[p.skill.element].color);
+      if (p.alive) this.fx.trail(p.mesh.position, p.skill.element, p.skill.isUltimate);
       else this.projectiles.splice(i, 1);
     }
     if (fighting) this.combat.update(this.projectiles, this.fighters, this.fx);
@@ -395,6 +418,7 @@ export class Game {
       const loser = winner === f1 ? f2 : f1;
       this.fx.burst(loser.pos.clone().setY(1.6), 0xffffff, 50, 8, 5);
       this.fx.burst(loser.pos.clone().setY(1.6), ELEMENTS[loser.element].color, 40, 6, 6);
+      if (winner) this.fx.impact(loser.pos.clone().setY(1.6), winner.element, true);
       this.hud.center('K.O.!', 'ko');
       this.slowMo = 1.2;
       this.shake = 0.6;

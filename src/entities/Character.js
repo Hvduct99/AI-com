@@ -1,10 +1,12 @@
 // ============================================================
-// Character — 1 võ sĩ trên sàn đấu.
+// Character — 1 võ tướng trên sàn đấu.
 // Constructor nhận characterDef (config/characters.js).
 // Muốn đổi model: sửa AssetBuilders.CharacterBuilder.
 // ============================================================
 import * as THREE from 'three';
 import { ELEMENTS } from '../config/elements.js';
+import { BLOCK } from '../config/characters.js';
+import { AssetBuilders } from '../utils/AssetLoader.js';
 
 let UID = 0;
 const RED = new THREE.Color(0xff2222);
@@ -13,8 +15,13 @@ function disposeObject(root) {
   root.traverse((o) => {
     // Geometry của model GLB dùng chung giữa các bản clone -> không dispose
     if (o.geometry && !o.userData.sharedGeo) o.geometry.dispose();
+    // Mỗi bản clone có skeleton riêng; boneTexture của nó nằm trên GPU
+    if (o.isSkinnedMesh) o.skeleton?.dispose();
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-    for (const m of mats) { m.map?.dispose(); m.dispose(); }
+    for (const m of mats) {
+      if (m.map && !m.map.userData.shared) m.map.dispose();
+      m.dispose();
+    }
   });
 }
 
@@ -23,6 +30,19 @@ function wrapAngle(a) {
   while (a < -Math.PI) a += Math.PI * 2;
   return a;
 }
+
+// Vai trò animation -> tên clip ưu tiên (model khác nhau có bộ clip khác nhau)
+const ANIM_ROLES = {
+  idle: ['Idle_Attacking', 'Idle_Weapon', 'Attack_Idle', 'Attacking_Idle', 'Idle'],
+  walk: ['Walk', 'Walking'],
+  light: ['Sword_AttackFast', 'Dagger_Attack', 'Attack', 'Staff_Attack', 'Spell1', 'Punch'],
+  heavy: ['Sword_Attack', 'Dagger_Attack2', 'Attack2', 'Spell2', 'Staff_Attack', 'Punch'],
+  ult: ['Spell2', 'Sword_Attack', 'Attack2', 'Dagger_Attack2', 'Staff_Attack', 'Punch'],
+  hit: ['RecieveHit', 'RecieveHit_Attacking'],
+  block: ['RecieveHit_Attacking', 'Idle_Attacking', 'Idle'],
+  death: ['Death'],
+  win: ['Spell1', 'Wave', 'Dance', 'Idle'],
+};
 
 export class Character {
   constructor(scene, def, side = 1) {
@@ -37,11 +57,14 @@ export class Character {
     this.alive = true;
 
     this.cooldowns = [0, 0, 0, 0];
-    this.flash = 0;      // thời gian nhấp nháy khi trúng đòn
+    this.blockCd = 0;
+    this.blockT = 0;     // > 0: đang giơ khiên
+    this.blockAge = 0;   // thời gian kể từ lúc giơ khiên (để tính đỡ hoàn hảo)
+    this.flash = 0;
     this.attackAnim = 0;
     this.edgeTick = 0;
     this.edgeWarnCd = 0;
-    this.knockVel = 0;   // vận tốc đẩy lùi
+    this.knockVel = 0;
     this.moveInput = 0;
     this.deadT = 0;
     this.celebrating = false;
@@ -55,6 +78,9 @@ export class Character {
     this.label = this._makeLabel(def);
     this.label.position.y = 4.3;
     this.mesh.add(this.label);
+
+    this.shield = AssetBuilders.ShieldBuilder(def.element);
+    this.mesh.add(this.shield);
   }
 
   setMesh(model) {
@@ -65,7 +91,7 @@ export class Character {
     this.mixer?.stopAllAction();
     this.bodyRoot = model;
     this.mesh.add(model);
-    this.label.position.y = (model.userData.height ?? 3.5) + 0.8;
+    this.label.position.y = (model.userData.height ?? 3.5) + 0.9;
     this.yaw = this.facing > 0 ? (model.userData.yawRight ?? 0) : (model.userData.yawLeft ?? 0);
     model.rotation.y = this.yaw;
 
@@ -81,21 +107,24 @@ export class Character {
     });
     this._flashOn = false;
 
-    // Animation (nếu model có clip)
     this.mixer = null;
     this.actions = {};
+    this.anim = {};
     this.current = null;
     this.oneShotT = 0;
     const clips = model.userData.clips;
     if (clips && clips.length) {
       this.mixer = new THREE.AnimationMixer(model.userData.animRoot ?? model);
       for (const clip of clips) this.actions[clip.name] = this.mixer.clipAction(clip);
-      this._play('Idle', { fade: 0 });
+      for (const [role, names] of Object.entries(ANIM_ROLES)) {
+        this.anim[role] = names.find((n) => this.actions[n]) ?? null;
+      }
+      this._play(this.anim.idle, { fade: 0 });
     }
   }
 
   _play(name, { once = false, timeScale = 1, fade = 0.18 } = {}) {
-    const next = this.actions[name];
+    const next = name && this.actions[name];
     if (!next) return 0;
     if (next === this.current && !once) {
       next.setEffectiveTimeScale(timeScale);
@@ -117,28 +146,36 @@ export class Character {
     return next.getClip().duration / Math.abs(timeScale);
   }
 
+  /** Chơi 1 animation 1 lần, sau đó tự về idle/walk */
+  _oneShot(role, timeScale = 1, maxT = 0.9) {
+    if (!this.mixer || !this.alive) return;
+    const d = this._play(this.anim[role], { once: true, timeScale, fade: 0.08 });
+    if (d > 0) this.oneShotT = Math.min(maxT, d * 0.85);
+  }
+
   _makeLabel(def) {
     const el = ELEMENTS[def.element];
     const c = document.createElement('canvas');
-    c.width = 256; c.height = 64;
+    c.width = 320; c.height = 64;
     const ctx = c.getContext('2d');
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(8, 6, 240, 52, 14) : ctx.rect(8, 6, 240, 52);
+    ctx.roundRect ? ctx.roundRect(8, 6, 304, 52, 14) : ctx.rect(8, 6, 304, 52);
     ctx.fill();
     ctx.font = 'bold 28px "Be Vietnam Pro", "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = el.css;
-    ctx.fillText(`${def.icon} ${def.name}`, 128, 42);
+    ctx.fillText(`${def.icon} ${def.name}`, 160, 42, 290);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
-    sp.scale.set(2.2, 0.55, 1);
+    sp.scale.set(2.6, 0.52, 1);
     sp.renderOrder = 5;
     return sp;
   }
 
   get x() { return this.pos.x; }
+  get blocking() { return this.blockT > 0 && this.alive; }
 
   canCast(i) {
     if (!this.alive) return false;
@@ -148,37 +185,56 @@ export class Character {
     return true;
   }
 
+  canBlock() {
+    return this.alive && this.blockCd <= 0 && this.energy >= BLOCK.energyCost;
+  }
+
+  /** Giơ khiên. Trả về true nếu thành công */
+  block() {
+    if (!this.canBlock()) return false;
+    this.energy -= BLOCK.energyCost;
+    this.blockCd = BLOCK.cooldown;
+    this.blockT = BLOCK.duration;
+    this.blockAge = 0;
+    if (this.mixer && this.oneShotT <= 0) this._play(this.anim.block, { once: true, timeScale: 0.6, fade: 0.06 });
+    this.oneShotT = Math.max(this.oneShotT, 0.3);
+    return true;
+  }
+
   spendFor(i) {
     const sk = this.def.skills[i];
     this.cooldowns[i] = sk.cooldown;
     if (sk.isUltimate) this.energy = 0;
     this.attackAnim = 0.35;
-    if (this.mixer) {
-      const d = this._play('Punch', { once: true, timeScale: sk.isUltimate ? 1.3 : 2.2, fade: 0.08 });
-      this.oneShotT = Math.max(0.2, d - 0.15);
-    }
+    this.blockT = 0; // ra chiêu thì hạ khiên
+    const role = sk.isUltimate ? 'ult' : i === 0 ? 'light' : 'heavy';
+    this._oneShot(role, sk.isUltimate ? 1.2 : 1.8, sk.isUltimate ? 0.9 : 0.55);
   }
 
-  takeDamage(amount, flash = true) {
+  /** @param {boolean} react - có giật người (animation trúng đòn) không */
+  takeDamage(amount, flash = true, react = false) {
     if (!this.alive) return;
     this.hp = Math.max(0, this.hp - amount);
     if (flash) this.flash = 0.25;
     if (this.hp <= 0) this.die();
+    else if (react && this.oneShotT <= 0.1) this._oneShot('hit', 1.6, 0.4);
   }
 
   die() {
     if (!this.alive) return;
     this.alive = false;
     this.hp = 0;
+    this.blockT = 0;
     this.knockVel *= 0.5;
-    if (this.mixer) this._play('Death', { once: true, fade: 0.1 });
+    if (this.mixer) this._play(this.anim.death, { once: true, fade: 0.1 });
   }
 
   celebrate() {
     if (!this.alive || this.celebrating) return;
     this.celebrating = true;
     this.moveInput = 0;
-    if (this.mixer) this._play(this.actions.Dance ? 'Dance' : 'Wave', { fade: 0.3 });
+    this.blockT = 0;
+    if (this.mixer) this._play(this.anim.win, { fade: 0.3 });
   }
 
   healEnergy(v) {
@@ -192,20 +248,42 @@ export class Character {
   /** Di chuyển + vật lý đẩy lùi, kẹp trong biên. */
   integrate(dt, moveInput, halfBound) {
     this.moveInput = this.alive ? moveInput : 0;
-    const target = this.moveInput * this.moveSpeed;
+    const speed = this.moveSpeed * (this.blocking ? 0.45 : 1);
     this.knockVel *= Math.pow(0.02, dt);
     if (Math.abs(this.knockVel) < 0.01) this.knockVel = 0;
-    this.pos.x += (target + this.knockVel) * dt;
+    this.pos.x += (this.moveInput * speed + this.knockVel) * dt;
     this.pos.x = Math.max(-halfBound, Math.min(halfBound, this.pos.x));
+  }
+
+  _updateShield(dt) {
+    const sh = this.shield;
+    const on = this.blocking;
+    if (on) {
+      this.blockT -= dt;
+      this.blockAge += dt;
+    }
+    sh.visible = on;
+    if (!on) return;
+    const k = Math.min(1, this.blockT / 0.15);           // mờ dần khi sắp hết
+    const pop = Math.min(1, this.blockAge / 0.08);        // bật ra nhanh
+    sh.scale.set(this.facing * (0.6 + pop * 0.4), 0.6 + pop * 0.4, 0.6 + pop * 0.4);
+    sh.position.x = this.facing * 0.55;
+    const perfect = this.blockAge < BLOCK.perfectWindow;
+    const [dome, rim, glow] = sh.userData.mats;
+    dome.opacity = (perfect ? 0.6 : 0.35) * k;
+    rim.opacity = 0.85 * k;
+    glow.opacity = (perfect ? 0.8 : 0.45) * k;
   }
 
   update(dt) {
     for (let i = 0; i < 4; i++) {
       if (this.cooldowns[i] > 0) this.cooldowns[i] = Math.max(0, this.cooldowns[i] - dt);
     }
+    if (this.blockCd > 0) this.blockCd = Math.max(0, this.blockCd - dt);
     if (this.flash > 0) this.flash -= dt;
     if (this.attackAnim > 0) this.attackAnim -= dt;
     if (this.edgeWarnCd > 0) this.edgeWarnCd -= dt;
+    this._updateShield(dt);
 
     this.mesh.position.copy(this.pos);
     if (!this.bodyRoot) return;
@@ -226,7 +304,7 @@ export class Character {
     if (flashing !== this._flashOn) {
       this._flashOn = flashing;
       for (const f of this.flashMats) {
-        if (flashing) { f.m.emissive.copy(RED); f.m.emissiveIntensity = 1.2; }
+        if (flashing) { f.m.emissive.copy(RED); f.m.emissiveIntensity = 0.9; }
         else { f.m.emissive.copy(f.color); f.m.emissiveIntensity = f.intensity; }
       }
     }
@@ -236,17 +314,16 @@ export class Character {
       if (this.alive && !this.celebrating && this.oneShotT <= 0) {
         if (this.moveInput !== 0) {
           const forward = this.moveInput * this.facing > 0;
-          this._play('Walking', { timeScale: forward ? 1.5 : -1.2 });
+          this._play(this.anim.walk, { timeScale: (forward ? 1.5 : -1.2) * (this.blocking ? 0.5 : 1) });
         } else {
-          this._play('Idle');
+          this._play(this.anim.idle);
         }
       }
       this.mixer.update(dt);
     } else {
-      // Fallback procedural: nhún nhảy + giơ tay + ngã khi chết
+      // Fallback procedural: nhún + giơ tay + ngã khi chết
       const t = performance.now() * 0.003;
       this.bodyRoot.position.y = this.alive ? Math.abs(Math.sin(t + this.uid)) * 0.07 : 0;
-      if (ud.ring) ud.ring.rotation.z += dt * 2;
       if (ud.armR) ud.armR.rotation.x = this.attackAnim > 0 ? -1.4 : 0;
       if (!this.alive) {
         this.deadT += dt;
@@ -260,6 +337,7 @@ export class Character {
     scene.remove(this.mesh);
     this.mixer?.stopAllAction();
     if (this.bodyRoot) disposeObject(this.bodyRoot);
+    disposeObject(this.shield);
     this.label.material.map.dispose();
     this.label.material.dispose();
   }

@@ -16,6 +16,7 @@
     <!-- Màn chọn nhân vật -->
     <div id="select-screen" class="screen">
       <h1>NGŨ HÀNH CHIẾN</h1>
+      <p class="tagline">Tam Quốc anh hùng — Ngũ hành tranh bá</p>
       <p class="subtitle">Kim khắc Mộc • Mộc khắc Thổ • Thổ khắc Thủy • Thủy khắc Hỏa • Hỏa khắc Kim</p>
 
       <div class="mode-row">
@@ -42,7 +43,7 @@
       </div>
 
       <button id="start-btn" type="button" disabled>ĐANG TẢI...</button>
-      <p class="footnote">Esc: tạm dừng • Chiêu cuối (R / P) cần đầy thanh nộ • Đứng sát biên đỏ sẽ mất máu</p>
+      <p class="footnote">S / ↓: Đỡ (tốn năng lượng, đỡ sát lúc trúng = HOÀN HẢO, không mất máu) • Tuyệt chiêu (R / L) cần đầy nộ • Esc: tạm dừng • Đứng sát biên đỏ sẽ mất máu</p>
     </div>
 
     <!-- Màn hình game -->
@@ -69,6 +70,7 @@
         </div>
       </div>
 
+      <div id="screen-flash"></div>
       <div id="center-text" class="hidden"></div>
 
       <div class="hud-bottom">
@@ -83,6 +85,7 @@
           <button type="button" data-code="KeyD">▶</button>
         </div>
         <div class="touch-skills">
+          <button type="button" data-code="KeyS" data-idx="b">🛡️</button>
           <button type="button" data-code="KeyQ" data-idx="0">1</button>
           <button type="button" data-code="KeyW" data-idx="1">2</button>
           <button type="button" data-code="KeyE" data-idx="2">3</button>
